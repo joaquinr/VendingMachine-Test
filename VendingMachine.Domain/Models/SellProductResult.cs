@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace VendingMachine.Domain
+namespace VendingMachine.Domain.Models
 {
     public class SellProductResult
     {

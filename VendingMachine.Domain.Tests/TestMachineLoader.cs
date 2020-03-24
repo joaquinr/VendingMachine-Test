@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading.Tasks;
+using VendingMachine.Domain.Models;
+using VendingMachine.Domain.Services;
 
 namespace VendingMachine.Domain.Tests
 {
@@ -16,11 +19,13 @@ namespace VendingMachine.Domain.Tests
             this.StorageProducts = new List<Product>();
             this.UserAcceptedCoins = new List<Coin>();
         }
-        public void LoadVendingMachine(VendingMachine machine)
+        public Task LoadVendingMachine(VendingMachineState machine)
         {
-            this.StorageCoins.ForEach(coin => machine.AddCoin(coin.Denomination));
-            this.UserAcceptedCoins.ForEach(coin => machine.AcceptCoin(coin));
-            this.StorageProducts.ForEach(product => machine.AddProduct(product));
+            this.StorageCoins.ForEach(coin => machine.CoinStorage.Add(coin));
+            this.UserAcceptedCoins.ForEach(coin => machine.UserCoinsAccepted.Add(coin));
+            this.StorageProducts.ForEach(product => machine.ProductStorage.Add(product));
+
+            return Task.FromResult(0);
         }
     }
 }

@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace VendingMachine.Domain
+namespace VendingMachine.Domain.Models
 {
     public class Coin
     {

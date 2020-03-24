@@ -1,6 +1,8 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Shouldly;
 using System.Linq;
+using VendingMachine.Domain.Models;
+using VendingMachine.Domain.Services;
 
 namespace VendingMachine.Domain.Tests
 {
@@ -10,7 +12,7 @@ namespace VendingMachine.Domain.Tests
         [TestMethod]
         public void When_User_Inserts_A_Coin_Vending_Machine_Stores_It()
         {
-            var machine = new VendingMachine(null);
+            var machine = new VendingMachineService(null, null);
 
             machine.AcceptCoin(new Coin() { Denomination = 0.5 });
 
@@ -19,7 +21,7 @@ namespace VendingMachine.Domain.Tests
         [TestMethod]
         public void When_User_Asks_To_Return_Coins_Coins_Are_Returned()
         {
-            var machine = new VendingMachine(null);
+            var machine = new VendingMachineService(null, null);
 
             machine.AcceptCoin(new Coin() { Denomination = 0.5 });
             var returnedCoins = machine.ReturnCoins();
@@ -32,7 +34,7 @@ namespace VendingMachine.Domain.Tests
         {
             var productName = "Test";
             var testProduct = new Product() { Name = productName, Price = 1 };
-            var machine = new VendingMachine(null);
+            var machine = new VendingMachineService(null, null);
             machine.AddProduct(testProduct);
 
             machine.AcceptCoin(new Coin() { Denomination = 1 });
@@ -52,8 +54,8 @@ namespace VendingMachine.Domain.Tests
             machineLoader.StorageCoins.Add(new Coin() { Denomination = 2 });
             machineLoader.StorageCoins.Add(new Coin() { Denomination = 3 });
 
-            var machine = new VendingMachine(machineLoader);
-            machine.LoadMachine();
+            var machine = new VendingMachineService(machineLoader, null);
+            machine.LoadMachine().Wait();
 
             machine.AcceptCoin(new Coin() { Denomination = 2 });
             machine.AcceptCoin(new Coin() { Denomination = 2 });
@@ -75,8 +77,8 @@ namespace VendingMachine.Domain.Tests
             machineLoader.StorageCoins.Add(new Coin() { Denomination = 1 });
             machineLoader.StorageCoins.Add(new Coin() { Denomination = 2 });
 
-            var machine = new VendingMachine(machineLoader);
-            machine.LoadMachine();
+            var machine = new VendingMachineService(machineLoader, null);
+            machine.LoadMachine().Wait();
 
             machine.AcceptCoin(new Coin() { Denomination = 1 });
             machine.AcceptCoin(new Coin() { Denomination = 2 });
@@ -98,8 +100,8 @@ namespace VendingMachine.Domain.Tests
             machineLoader.StorageCoins.Add(new Coin() { Denomination = 1 });
             machineLoader.StorageCoins.Add(new Coin() { Denomination = 1 });
 
-            var machine = new VendingMachine(machineLoader);
-            machine.LoadMachine();
+            var machine = new VendingMachineService(machineLoader, null);
+            machine.LoadMachine().Wait();
 
             machine.AcceptCoin(new Coin() { Denomination = 1 });
             machine.AcceptCoin(new Coin() { Denomination = 2 });
@@ -116,7 +118,7 @@ namespace VendingMachine.Domain.Tests
         {
             var productName = "Test";
             var testProduct = new Product() { Name = productName, Price = 5 };
-            var machine = new VendingMachine(null);
+            var machine = new VendingMachineService(null, null);
             machine.AddProduct(testProduct);
 
             machine.AcceptCoin(new Coin() { Denomination = 1 });
@@ -130,7 +132,7 @@ namespace VendingMachine.Domain.Tests
         {
             var productName = "Test";
             var testProduct = new Product() { Name = productName, Price = 1 };
-            var machine = new VendingMachine(null);
+            var machine = new VendingMachineService(null, null);
             //machine.AddProduct(testProduct);
 
             machine.AcceptCoin(new Coin() { Denomination = 1 });
@@ -144,7 +146,7 @@ namespace VendingMachine.Domain.Tests
         {
             var productName = "Test";
             var testProduct = new Product() { Name = productName, Price = 1 };
-            var machine = new VendingMachine(null);
+            var machine = new VendingMachineService(null, null);
             machine.AddProduct(testProduct);
 
             machine.AcceptCoin(new Coin() { Denomination = 5 });
@@ -153,6 +155,22 @@ namespace VendingMachine.Domain.Tests
             result.Status.ShouldBe(eSellProductStatus.OutOfChange);
             result.Change.Any().ShouldBeFalse();
         }
+        [TestMethod]
+        public void When_machine_state_is_json_saved_it_is_restored_correctly()
+        {
+            var machine = new VendingMachineService(new VendingMachineJsonLoader(), new VendingMachineJsonSaver());
+            machine.AddCoin(1);
+            machine.AddProduct(new Product() { Name = "Test", Price = 5 });
+            machine.AcceptCoin(new Coin() { Denomination = 5 });
 
+            machine.SaveMachine().Wait();
+
+            var loadedMachine = new VendingMachineService(new VendingMachineJsonLoader(), new VendingMachineJsonSaver());
+            loadedMachine.LoadMachine().Wait();
+
+            machine.CurrentInsertedAmount.ShouldBe(5);
+            machine.Products.First().Name.ShouldBe("Test");
+            machine.CoinsAvailable.First().Denomination.ShouldBe(1);
+        }
     }
 }
