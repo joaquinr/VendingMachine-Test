@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Text;
 
 namespace VendingMachine.Domain
@@ -37,11 +38,50 @@ namespace VendingMachine.Domain
         }
         public IEnumerable<Coin> ReturnCoins()
         {
-            throw new NotImplementedException();
+            var returnedCoins = this.userCoinsAccepted.ToList();
+            this.userCoinsAccepted.Clear();
+
+            return returnedCoins;
         }
-        public void SellProduct(string product)
+        public SellProductResult SellProduct(string productName)
         {
-            throw new NotImplementedException();
+            var product = this.productStorage.FirstOrDefault(prod => prod.Name == productName);
+
+            if (product == null) return new SellProductResult() { Status = eSellProductStatus.SoldOut };
+            
+            var insertedAmount = this.userCoinsAccepted.Sum(coin => coin.Denomination);
+            if (insertedAmount < product.Price) return new SellProductResult() { Status = eSellProductStatus.InsufficientFunds };
+            this.productStorage.Remove(product);
+            
+            var change = GetChange(product.Price, insertedAmount);
+            
+            if(change == null) return new SellProductResult() { Status = eSellProductStatus.OutOfChange };
+
+            foreach(var coin in change) {
+                if (this.userCoinsAccepted.Contains(coin))
+                    this.userCoinsAccepted.Remove(coin);
+                else
+                    this.coinStorage.Remove(coin);                
+            }
+
+            return new SellProductResult() { Status = eSellProductStatus.Success, Change = change };
+        }
+        private List<Coin> GetChange(double price, double insertedAmount)
+        {
+            var availableCoins = this.coinStorage.Union(this.userCoinsAccepted).OrderByDescending(coin => coin.Denomination).ToList();
+            var change = new List<Coin>();
+
+            var targetChange = insertedAmount - price;
+            while (change.Sum(coin => coin.Denomination) < targetChange)
+            {
+                var coinForChange = availableCoins.FirstOrDefault(coin => coin.Denomination <= targetChange);
+                if (coinForChange == null) return null;
+
+                availableCoins.Remove(coinForChange);
+                change.Add(coinForChange);
+            }
+
+            return change;
         }
 
         /// <summary>
