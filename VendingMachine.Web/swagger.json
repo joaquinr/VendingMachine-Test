@@ -1,0 +1,196 @@
+﻿{
+  "x-generator": "NSwag v13.3.0.0 (NJsonSchema v10.1.11.0 (Newtonsoft.Json v12.0.0.0))",
+  "swagger": "2.0",
+  "info": {
+    "title": "My Title",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/VendingMachine/GetMachineState": {
+      "get": {
+        "tags": [
+          "VendingMachine"
+        ],
+        "summary": "Gets the current client side machine state for its use in a UI",
+        "operationId": "VendingMachine_GetMachineState",
+        "produces": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "responses": {
+          "200": {
+            "x-nullable": false,
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/VendingMachineData"
+            }
+          }
+        }
+      }
+    },
+    "/VendingMachine/InsertCoin": {
+      "post": {
+        "tags": [
+          "VendingMachine"
+        ],
+        "summary": "Adds a coin to the user's input",
+        "operationId": "VendingMachine_AcceptCoin",
+        "parameters": [
+          {
+            "type": "number",
+            "name": "denomination",
+            "in": "query",
+            "format": "double",
+            "x-nullable": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "x-nullable": true,
+            "description": "",
+            "schema": {
+              "type": "file"
+            }
+          }
+        }
+      }
+    },
+    "/VendingMachine/ReturnCoins": {
+      "post": {
+        "tags": [
+          "VendingMachine"
+        ],
+        "summary": "Returns coins inserted in the machine by the user",
+        "operationId": "VendingMachine_ReturnCoins",
+        "produces": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "responses": {
+          "200": {
+            "x-nullable": false,
+            "description": "",
+            "schema": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "integer",
+                "format": "int32"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/VendingMachine/SellProduct": {
+      "post": {
+        "tags": [
+          "VendingMachine"
+        ],
+        "summary": "Sells a product to the customer.",
+        "operationId": "VendingMachine_SellProduct",
+        "produces": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "parameters": [
+          {
+            "type": "string",
+            "name": "productName",
+            "in": "query",
+            "x-nullable": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "x-nullable": false,
+            "description": "Status code for the operation and any change",
+            "schema": {
+              "$ref": "#/definitions/SellProductResult"
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "VendingMachineData": {
+      "type": "object",
+      "required": [
+        "currentInsertedAmount"
+      ],
+      "properties": {
+        "currentInsertedAmount": {
+          "type": "number",
+          "format": "double"
+        },
+        "availableProducts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Product"
+          }
+        }
+      }
+    },
+    "Product": {
+      "type": "object",
+      "description": "Models a product inserted on the machine",
+      "required": [
+        "price",
+        "quantity"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Product name, used as ID for the sell operation"
+        },
+        "price": {
+          "type": "number",
+          "description": "Product unit price",
+          "format": "double"
+        },
+        "quantity": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "SellProductResult": {
+      "type": "object",
+      "description": "DTO to return sell product operation's status code and change in a single object",
+      "required": [
+        "status"
+      ],
+      "properties": {
+        "change": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "status": {
+          "$ref": "#/definitions/ESellProductStatus"
+        }
+      }
+    },
+    "ESellProductStatus": {
+      "type": "integer",
+      "description": "Current result of the sell product operation",
+      "x-enumNames": [
+        "Success",
+        "InsufficientFunds",
+        "SoldOut",
+        "OutOfChange"
+      ],
+      "enum": [
+        0,
+        1,
+        2,
+        3
+      ]
+    }
+  }
+}

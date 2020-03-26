@@ -8,7 +8,7 @@ using VendingMachine.Domain.Models;
 
 namespace VendingMachine.Domain.Services
 {
-    public class VendingMachineService
+    public class VendingMachineService : IVendingMachineService
     {
         private readonly IVendingMachineLoader vendingMachineLoader;
         private readonly IVendingMachineSaver vendingMachineSaver;
@@ -18,21 +18,21 @@ namespace VendingMachine.Domain.Services
         {
             get
             {
-                return this.machineState.UserCoinsAccepted.Sum(coin => coin.Denomination);
+                return this.machineState.UserCoinsAccepted.Sum(coin => coin.Key * coin.Value);
             }
         }
-        public List<Product> Products 
-        { 
+        public List<Product> Products
+        {
             get
             {
                 return this.machineState.ProductStorage.ToList();
             }
         }
-        public List<Coin> CoinsAvailable
+        public Dictionary<double, int> CoinsAvailable
         {
             get
             {
-                return this.machineState.CoinStorage.ToList();
+                return this.machineState.CoinStorage;
             }
         }
 
@@ -60,18 +60,18 @@ namespace VendingMachine.Domain.Services
         /// <summary>
         /// Adds a coin to the user's input
         /// </summary>
-        /// <param name="coin"></param>
-        public void AcceptCoin(Coin coin)
+        /// <param name="denomination"></param>
+        public void AcceptCoin(double denomination)
         {
-            this.machineState.UserCoinsAccepted.Add(coin);
+            this.AddCoinToBag(this.machineState.UserCoinsAccepted, denomination);
         }
         /// <summary>
         /// Returns coins inserted in the machine by the user
         /// </summary>
         /// <returns></returns>
-        public IEnumerable<Coin> ReturnCoins()
+        public IDictionary<double, int> ReturnCoins()
         {
-            var returnedCoins = this.machineState.UserCoinsAccepted.ToList();
+            var returnedCoins = this.machineState.UserCoinsAccepted.ToDictionary(o => o.Key, p => p.Value);
             this.machineState.UserCoinsAccepted.Clear();
 
             return returnedCoins;
@@ -85,57 +85,58 @@ namespace VendingMachine.Domain.Services
         {
             var product = this.machineState.ProductStorage.FirstOrDefault(prod => prod.Name == productName);
 
-            if (product == null) return new SellProductResult() { Status = eSellProductStatus.SoldOut };
+            if (product == null || product.Quantity <= 0) return new SellProductResult() { Status = eSellProductStatus.SoldOut };
 
-            var insertedAmount = this.machineState.UserCoinsAccepted.Sum(coin => coin.Denomination);
+            var insertedAmount = this.machineState.UserCoinsAccepted.Sum(coin => coin.Key * coin.Value);
             if (insertedAmount < product.Price) return new SellProductResult() { Status = eSellProductStatus.InsufficientFunds };
-            this.machineState.ProductStorage.Remove(product);
+            product.Quantity -= 1;
 
             var change = GetChange(product.Price, insertedAmount);
 
             if (change == null) return new SellProductResult() { Status = eSellProductStatus.OutOfChange };
-            RemoveUsedCoinsFromStorage(change);
+            this.machineState.UserCoinsAccepted.Clear();
 
             return new SellProductResult() { Status = eSellProductStatus.Success, Change = change };
         }
 
-        private void RemoveUsedCoinsFromStorage(List<Coin> change)
-        {
-            foreach (var coin in change)
-            {
-                if (this.machineState.UserCoinsAccepted.Contains(coin))
-                    this.machineState.UserCoinsAccepted.Remove(coin);
-                else
-                    this.machineState.CoinStorage.Remove(coin);
-            }
-        }
 
-        private List<Coin> GetChange(double price, double insertedAmount)
+        private Dictionary<double, int> GetChange(double price, double insertedAmount)
         {
-            var availableCoins = this.machineState.CoinStorage.Union(this.machineState.UserCoinsAccepted).OrderByDescending(coin => coin.Denomination).ToList();
-            var change = new List<Coin>();
+            var change = new Dictionary<double, int>();
+            var availableCoins = this.machineState.UserCoinsAccepted.Select(coin => new Coin() { Denomination= coin.Key, Quantity= coin.Value, IsUser= true})
+                .Union(this.machineState.CoinStorage.Select(coin => new Coin() { Denomination = coin.Key, Quantity = coin.Value, IsUser = false }))
+                .OrderByDescending(coin => coin.Denomination).ThenByDescending(coin => coin.IsUser).ToList();
 
-            var targetChange = insertedAmount - price;
-            while (change.Sum(coin => coin.Denomination) < targetChange)
+            var targetChange = Math.Round(insertedAmount - price, 2);
+            while (change.Sum(coin => coin.Key * coin.Value) < targetChange)
             {
                 var coinForChange = availableCoins.FirstOrDefault(coin => coin.Denomination <= targetChange);
                 if (coinForChange == null) return null;
 
-                availableCoins.Remove(coinForChange);
-                change.Add(coinForChange);
+                if (coinForChange.Quantity > 1) coinForChange.Quantity -= 1;
+                if (coinForChange.Quantity == 1) availableCoins.Remove(coinForChange);
+                AddCoinToBag(change, coinForChange.Denomination);
             }
 
             return change;
         }
 
+        private void AddCoinToBag(Dictionary<double, int> coinBag, double denomination)
+        {
+            if (!coinBag.ContainsKey(denomination))
+            {
+                coinBag.Add(denomination, 0);
+            }
+            coinBag[denomination] += 1;
+        }
+
         /// <summary>
         /// Adds a coin directly to storage, to be used for the initial load of the machine
         /// </summary>
-        /// <param name="quantity"></param>
         /// <param name="coinDenomination"></param>
         public void AddCoin(double coinDenomination)
         {
-            this.machineState.CoinStorage.Add(new Coin() { Denomination = coinDenomination });
+            this.AddCoinToBag(this.machineState.CoinStorage, coinDenomination);
         }
         /// <summary>
         /// Adds a product to storage, to be used for the initial load of the machine
@@ -144,6 +145,13 @@ namespace VendingMachine.Domain.Services
         public void AddProduct(Product product)
         {
             this.machineState.ProductStorage.Add(product);
+        }
+
+        private class Coin
+        {
+            public double Denomination { get; set; }
+            public int Quantity { get; set; }
+            public bool IsUser { get; set; }
         }
     }
 }

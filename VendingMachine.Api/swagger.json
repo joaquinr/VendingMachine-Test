@@ -1,0 +1,151 @@
+﻿{
+  "x-generator": "NSwag v13.3.0.0 (NJsonSchema v10.1.11.0 (Newtonsoft.Json v12.0.0.0))",
+  "swagger": "2.0",
+  "info": {
+    "title": "My Title",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/VendingMachine/InsertCoin": {
+      "post": {
+        "tags": [
+          "VendingMachine"
+        ],
+        "summary": "Adds a coin to the user's input",
+        "operationId": "VendingMachine_AcceptCoin",
+        "consumes": [
+          "application/json",
+          "text/json",
+          "application/*+json"
+        ],
+        "parameters": [
+          {
+            "name": "coin",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Coin"
+            },
+            "x-nullable": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "x-nullable": true,
+            "description": "",
+            "schema": {
+              "type": "file"
+            }
+          }
+        }
+      }
+    },
+    "/VendingMachine/ReturnCoins": {
+      "post": {
+        "tags": [
+          "VendingMachine"
+        ],
+        "summary": "Returns coins inserted in the machine by the user",
+        "operationId": "VendingMachine_ReturnCoins",
+        "produces": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "responses": {
+          "200": {
+            "x-nullable": false,
+            "description": "",
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Coin"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/VendingMachine/SellProduct": {
+      "post": {
+        "tags": [
+          "VendingMachine"
+        ],
+        "summary": "Sells a product to the customer.",
+        "operationId": "VendingMachine_SellProduct",
+        "produces": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "parameters": [
+          {
+            "type": "string",
+            "name": "productName",
+            "in": "query",
+            "x-nullable": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "x-nullable": false,
+            "description": "Status code for the operation and any change",
+            "schema": {
+              "$ref": "#/definitions/SellProductResult"
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "Coin": {
+      "type": "object",
+      "description": "Models a coin inserted on the machine",
+      "required": [
+        "denomination"
+      ],
+      "properties": {
+        "denomination": {
+          "type": "number",
+          "description": "Monetary amount represented by the coin",
+          "format": "double"
+        }
+      }
+    },
+    "SellProductResult": {
+      "type": "object",
+      "description": "DTO to return sell product operation's status code and change in a single object",
+      "required": [
+        "status"
+      ],
+      "properties": {
+        "change": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Coin"
+          }
+        },
+        "status": {
+          "$ref": "#/definitions/ESellProductStatus"
+        }
+      }
+    },
+    "ESellProductStatus": {
+      "type": "integer",
+      "description": "Current result of the sell product operation",
+      "x-enumNames": [
+        "Success",
+        "InsufficientFunds",
+        "SoldOut",
+        "OutOfChange"
+      ],
+      "enum": [
+        0,
+        1,
+        2,
+        3
+      ]
+    }
+  }
+}

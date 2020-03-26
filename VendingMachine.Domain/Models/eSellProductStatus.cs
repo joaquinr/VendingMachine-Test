@@ -1,5 +1,8 @@
 ﻿namespace VendingMachine.Domain.Models
 {
+    /// <summary>
+    /// Current result of the sell product operation
+    /// </summary>
     public enum eSellProductStatus
     {
         Success = 0,

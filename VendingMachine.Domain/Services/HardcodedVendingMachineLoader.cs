@@ -26,18 +26,16 @@ namespace VendingMachine.Domain.Services
 
         private static void LoadCoin(VendingMachineState machine, int quantity, double coinDenomination)
         {
-            for (int i = 0; i < quantity; i++)
-            {
-                machine.CoinStorage.Add(new Coin() { Denomination = coinDenomination });
-            }
+
+            machine.CoinStorage.Add(coinDenomination, quantity);
+
         }
 
         private static void LoadProduct(VendingMachineState machine, string productName, double productPrice, int quantity)
         {
-            for (int i = 0; i < quantity; i++)
-            {
-                machine.ProductStorage.Add(new Product() { Name = productName, Price = productPrice });
-            }
+
+            machine.ProductStorage.Add(new Product() { Name = productName, Price = productPrice, Quantity = quantity });
+
         }
     }
 }

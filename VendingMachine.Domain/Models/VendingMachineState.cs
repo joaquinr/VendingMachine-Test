@@ -4,17 +4,20 @@ using System.Text;
 
 namespace VendingMachine.Domain.Models
 {
+    /// <summary>
+    /// Current vending machine state, including coins inserted by the user, coins in the machine and products stored
+    /// </summary>
     public class VendingMachineState
     {
-        public List<Coin> CoinStorage { get; set; }
+        public Dictionary<double, int> CoinStorage { get; set; }
         public List<Product> ProductStorage { get; set; }
-        public List<Coin> UserCoinsAccepted { get; set; }
+        public Dictionary<double, int> UserCoinsAccepted { get; set; }
 
         public VendingMachineState()
         {
-            this.CoinStorage = new List<Coin>();
+            this.CoinStorage = new Dictionary<double, int>();
             this.ProductStorage = new List<Product>();
-            this.UserCoinsAccepted = new List<Coin>();
+            this.UserCoinsAccepted = new Dictionary<double, int>();
         }
     }
 }

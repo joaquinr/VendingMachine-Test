@@ -12,11 +12,19 @@ namespace VendingMachine.Domain.Services
     {
         public async Task LoadVendingMachine(VendingMachineState machine)
         {
-            var json = await this.ReadTextAsync("machineState.json");
-            var storedMachine = JsonConvert.DeserializeObject<VendingMachineState>(json);
-            machine.CoinStorage = storedMachine.CoinStorage;
-            machine.ProductStorage = storedMachine.ProductStorage;
-            machine.UserCoinsAccepted = storedMachine.UserCoinsAccepted;
+            if (File.Exists("machineState.json"))
+            {
+                var json = await this.ReadTextAsync("machineState.json");
+                var storedMachine = JsonConvert.DeserializeObject<VendingMachineState>(json);
+                machine.CoinStorage = storedMachine.CoinStorage;
+                machine.ProductStorage = storedMachine.ProductStorage;
+                machine.UserCoinsAccepted = storedMachine.UserCoinsAccepted;
+            }
+            else
+            {
+                var loader = new HardcodedVendingMachineLoader();
+                await loader.LoadVendingMachine(machine);
+            }
         }
 
         private async Task<string> ReadTextAsync(string filePath)
