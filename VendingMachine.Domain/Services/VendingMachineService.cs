@@ -108,14 +108,16 @@ namespace VendingMachine.Domain.Services
                 .OrderByDescending(coin => coin.Denomination).ThenByDescending(coin => coin.IsUser).ToList();
 
             var targetChange = Math.Round(insertedAmount - price, 2);
-            while (change.Sum(coin => coin.Key * coin.Value) < targetChange)
+            var currentChange = change.Sum(coin => coin.Key * coin.Value);
+            while (currentChange < targetChange)
             {
-                var coinForChange = availableCoins.FirstOrDefault(coin => coin.Denomination <= targetChange);
+                var coinForChange = availableCoins.FirstOrDefault(coin => coin.Denomination <= Math.Round(targetChange - currentChange, 2));
                 if (coinForChange == null) return null;
 
                 if (coinForChange.Quantity > 1) coinForChange.Quantity -= 1;
                 if (coinForChange.Quantity == 1) availableCoins.Remove(coinForChange);
                 AddCoinToBag(change, coinForChange.Denomination);
+                currentChange = change.Sum(coin => coin.Key * coin.Value);
             }
 
             return change;
