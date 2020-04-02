@@ -7,6 +7,7 @@ namespace VendingMachine.Api
     {
         public double CurrentInsertedAmount { get; internal set; }
         public List<Product> AvailableProducts { get; internal set; }
+        public Dictionary<double, int> AvailableCoins { get; internal set; }
     }
     public class ProductData
     {

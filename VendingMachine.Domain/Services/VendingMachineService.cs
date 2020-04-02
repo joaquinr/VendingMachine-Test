@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.Contracts;
 using System.Linq;
 using System.Net;
 using System.Text;
@@ -12,6 +13,7 @@ namespace VendingMachine.Domain.Services
     {
         private readonly IVendingMachineLoader vendingMachineLoader;
         private readonly IVendingMachineSaver vendingMachineSaver;
+        private readonly ICoinValidator coinValidator;
         private VendingMachineState machineState;
 
         public double CurrentInsertedAmount
@@ -36,10 +38,11 @@ namespace VendingMachine.Domain.Services
             }
         }
 
-        public VendingMachineService(IVendingMachineLoader vendingMachineLoader, IVendingMachineSaver vendingMachineSaver)
+        public VendingMachineService(IVendingMachineLoader vendingMachineLoader, IVendingMachineSaver vendingMachineSaver, ICoinValidator coinValidator)
         {
             this.vendingMachineLoader = vendingMachineLoader;
             this.vendingMachineSaver = vendingMachineSaver;
+            this.coinValidator = coinValidator;
             this.machineState = new VendingMachineState();
         }
         /// <summary>
@@ -61,9 +64,12 @@ namespace VendingMachine.Domain.Services
         /// Adds a coin to the user's input
         /// </summary>
         /// <param name="denomination"></param>
-        public void AcceptCoin(double denomination)
+        public bool AcceptCoin(double denomination)
         {
+            if (!this.coinValidator.IsValidCoin(denomination)) return false;
+            
             this.AddCoinToBag(this.machineState.UserCoinsAccepted, denomination);
+            return true;
         }
         /// <summary>
         /// Returns coins inserted in the machine by the user
@@ -87,7 +93,7 @@ namespace VendingMachine.Domain.Services
 
             if (product == null || product.Quantity <= 0) return new SellProductResult() { Status = eSellProductStatus.SoldOut };
 
-            var insertedAmount = this.machineState.UserCoinsAccepted.Sum(coin => coin.Key * coin.Value);
+            var insertedAmount = this.CurrentInsertedAmount;
             if (insertedAmount < product.Price) return new SellProductResult() { Status = eSellProductStatus.InsufficientFunds };
             product.Quantity -= 1;
 
@@ -96,31 +102,66 @@ namespace VendingMachine.Domain.Services
             if (change == null) return new SellProductResult() { Status = eSellProductStatus.OutOfChange };
             this.machineState.UserCoinsAccepted.Clear();
 
+
             return new SellProductResult() { Status = eSellProductStatus.Success, Change = change };
         }
 
 
         private Dictionary<double, int> GetChange(double price, double insertedAmount)
         {
-            var change = new Dictionary<double, int>();
-            var availableCoins = this.machineState.UserCoinsAccepted.Select(coin => new Coin() { Denomination= coin.Key, Quantity= coin.Value, IsUser= true})
+            
+            var availableCoins = this.machineState.UserCoinsAccepted.Select(coin => new Coin() { Denomination = coin.Key, Quantity = coin.Value, IsUser = true })
                 .Union(this.machineState.CoinStorage.Select(coin => new Coin() { Denomination = coin.Key, Quantity = coin.Value, IsUser = false }))
                 .OrderByDescending(coin => coin.Denomination).ThenByDescending(coin => coin.IsUser).ToList();
 
+            var change = CalculateChange(price, insertedAmount, availableCoins);
+            if (change == null) return null;
+
+            StoreUserCoins(availableCoins);
+
+            return change;
+        }
+
+        private Dictionary<double, int> CalculateChange(double price, double insertedAmount, List<Coin> availableCoins)
+        {
+            var change = new Dictionary<double, int>();
             var targetChange = Math.Round(insertedAmount - price, 2);
             var currentChange = change.Sum(coin => coin.Key * coin.Value);
             while (currentChange < targetChange)
             {
                 var coinForChange = availableCoins.FirstOrDefault(coin => coin.Denomination <= Math.Round(targetChange - currentChange, 2));
                 if (coinForChange == null) return null;
-
-                if (coinForChange.Quantity > 1) coinForChange.Quantity -= 1;
-                if (coinForChange.Quantity == 1) availableCoins.Remove(coinForChange);
+                UpdateAvailableCoins(availableCoins, coinForChange);
+                UpdateCoinStorage(coinForChange);
                 AddCoinToBag(change, coinForChange.Denomination);
                 currentChange = change.Sum(coin => coin.Key * coin.Value);
             }
 
             return change;
+        }
+
+        private void StoreUserCoins(List<Coin> availableCoins)
+        {
+            var coinsAcceptedFromUser = availableCoins.Where(coin => coin.IsUser);
+            foreach (var coin in coinsAcceptedFromUser)
+            {
+                this.AddCoinToBag(this.machineState.CoinStorage, coin.Denomination);
+            }
+        }
+
+        private void UpdateCoinStorage(Coin coinForChange)
+        {
+            if (!coinForChange.IsUser)
+            {
+                this.machineState.CoinStorage[coinForChange.Denomination] -= 1;
+                if (this.machineState.CoinStorage[coinForChange.Denomination] == 0) this.machineState.CoinStorage.Remove(coinForChange.Denomination);
+            }            
+        }
+
+        private void UpdateAvailableCoins(List<Coin> availableCoins, Coin coinForChange)
+        {
+            if (coinForChange.Quantity == 1) availableCoins.Remove(coinForChange);
+            if (coinForChange.Quantity > 1) coinForChange.Quantity -= 1;            
         }
 
         private void AddCoinToBag(Dictionary<double, int> coinBag, double denomination)

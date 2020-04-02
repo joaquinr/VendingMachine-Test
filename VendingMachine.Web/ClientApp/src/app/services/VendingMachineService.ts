@@ -24,7 +24,7 @@ export interface IVendingMachineClient {
     /**
      * Adds a coin to the user's input
      */
-    insertCoin(denomination: number): Observable<FileResponse>;
+    insertCoin(denomination: number): Observable<boolean>;
     /**
      * Returns coins inserted in the machine by the user
      */
@@ -102,7 +102,7 @@ export class VendingMachineClient implements IVendingMachineClient {
     /**
      * Adds a coin to the user's input
      */
-    insertCoin(denomination: number): Observable<FileResponse> {
+    insertCoin(denomination: number): Observable<boolean> {
         let url_ = this.baseUrl + "/VendingMachine/InsertCoin?";
         if (denomination === undefined || denomination === null)
             throw new Error("The parameter 'denomination' must be defined and cannot be null.");
@@ -114,7 +114,7 @@ export class VendingMachineClient implements IVendingMachineClient {
             observe: "response",
             responseType: "blob",			
             headers: new HttpHeaders({
-                "Accept": "application/octet-stream"
+                "Accept": "application/json"
             })
         };
 
@@ -125,31 +125,33 @@ export class VendingMachineClient implements IVendingMachineClient {
                 try {
                     return this.processInsertCoin(<any>response_);
                 } catch (e) {
-                    return <Observable<FileResponse>><any>_observableThrow(e);
+                    return <Observable<boolean>><any>_observableThrow(e);
                 }
             } else
-                return <Observable<FileResponse>><any>_observableThrow(response_);
+                return <Observable<boolean>><any>_observableThrow(response_);
         }));
     }
 
-    protected processInsertCoin(response: HttpResponseBase): Observable<FileResponse> {
+    protected processInsertCoin(response: HttpResponseBase): Observable<boolean> {
         const status = response.status;
         const responseBlob = 
             response instanceof HttpResponse ? response.body : 
             (<any>response).error instanceof Blob ? (<any>response).error : undefined;
 
         let _headers: any = {}; if (response.headers) { for (let key of response.headers.keys()) { _headers[key] = response.headers.get(key); }};
-        if (status === 200 || status === 206) {
-            const contentDisposition = response.headers ? response.headers.get("content-disposition") : undefined;
-            const fileNameMatch = contentDisposition ? /filename="?([^"]*?)"?(;|$)/g.exec(contentDisposition) : undefined;
-            const fileName = fileNameMatch && fileNameMatch.length > 1 ? fileNameMatch[1] : undefined;
-            return _observableOf({ fileName: fileName, data: <any>responseBlob, status: status, headers: _headers });
+        if (status === 200) {
+            return blobToText(responseBlob).pipe(_observableMergeMap(_responseText => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : jsonParse(_responseText, this.jsonParseReviver);
+            result200 = resultData200 !== undefined ? resultData200 : <any>null;
+            return _observableOf(result200);
+            }));
         } else if (status !== 200 && status !== 204) {
             return blobToText(responseBlob).pipe(_observableMergeMap(_responseText => {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             }));
         }
-        return _observableOf<FileResponse>(<any>null);
+        return _observableOf<boolean>(<any>null);
     }
 
     /**
@@ -270,6 +272,7 @@ export class VendingMachineClient implements IVendingMachineClient {
 export class VendingMachineData implements IVendingMachineData {
     currentInsertedAmount!: number;
     availableProducts!: Product[] | undefined;
+    availableCoins!: { [key: string]: number; } | undefined;
 
     constructor(data?: IVendingMachineData) {
         if (data) {
@@ -288,6 +291,13 @@ export class VendingMachineData implements IVendingMachineData {
                 for (let item of _data["availableProducts"])
                     this.availableProducts!.push(Product.fromJS(item, _mappings));
             }
+            if (_data["availableCoins"]) {
+                this.availableCoins = {} as any;
+                for (let key in _data["availableCoins"]) {
+                    if (_data["availableCoins"].hasOwnProperty(key))
+                        this.availableCoins![key] = _data["availableCoins"][key];
+                }
+            }
         }
     }
 
@@ -304,6 +314,13 @@ export class VendingMachineData implements IVendingMachineData {
             for (let item of this.availableProducts)
                 data["availableProducts"].push(item.toJSON());
         }
+        if (this.availableCoins) {
+            data["availableCoins"] = {};
+            for (let key in this.availableCoins) {
+                if (this.availableCoins.hasOwnProperty(key))
+                    data["availableCoins"][key] = this.availableCoins[key];
+            }
+        }
         return data; 
     }
 }
@@ -311,6 +328,7 @@ export class VendingMachineData implements IVendingMachineData {
 export interface IVendingMachineData {
     currentInsertedAmount: number;
     availableProducts: Product[] | undefined;
+    availableCoins: { [key: string]: number; } | undefined;
 }
 
 /** Models a product inserted on the machine */
@@ -477,13 +495,6 @@ function createInstance<T>(data: any, mappings: any, type: any): T {
     mappings.push({ source: data, target: result });
     result.init(data, mappings);
     return result;
-}
-
-export interface FileResponse {
-    data: Blob;
-    status: number;
-    fileName?: string;
-    headers?: { [name: string]: any };
 }
 
 export class ApiException extends Error {

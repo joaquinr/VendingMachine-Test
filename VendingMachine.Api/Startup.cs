@@ -35,6 +35,7 @@ namespace VendingMachine.Api
             services.AddTransient<IVendingMachineService, VendingMachineService>();
             services.AddTransient<IVendingMachineLoader, VendingMachineJsonLoader>();
             services.AddTransient<IVendingMachineSaver, VendingMachineJsonSaver>();
+            services.AddTransient<ICoinValidator, EuroCoinValidator>();
 
             services.AddCors(options =>
             {

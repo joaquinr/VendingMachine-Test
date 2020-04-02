@@ -10,8 +10,23 @@
 <table class='table table-striped' aria-labelledby="tableLabel" *ngIf="machineData">
   <thead>
     <tr>
+      <th>Denomination</th>
+      <th>Available Quantity</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr *ngFor="let coin of machineData.availableCoins | keyvalue">
+      <td>{{ coin.key }}</td>
+      <td>{{ coin.value }}</td>
+    </tr>
+  </tbody>
+</table>
+<table class='table table-striped' aria-labelledby="tableLabel" *ngIf="machineData">
+  <thead>
+    <tr>
       <th>Product</th>
       <th>Price</th>
+      <th>Available Quantity</th>
       <th>Actions</th>
     </tr>
   </thead>
@@ -19,6 +34,7 @@
     <tr *ngFor="let product of machineData.availableProducts">
       <td>{{ product.name }}</td>
       <td>{{ product.price }}</td>
+      <td>{{ product.quantity }}</td>
       <td><button type="button" class="btn btn-primary" (click)="onPurchaseProduct(product.name)">Purchase</button></td>
     </tr>
   </tbody>

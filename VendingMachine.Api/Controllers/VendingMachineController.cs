@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -32,28 +33,26 @@ namespace VendingMachine.Api.Controllers
             {
                 CurrentInsertedAmount = this.vendingMachine.CurrentInsertedAmount,
                 AvailableProducts = this.vendingMachine.Products.Where(product => product.Quantity > 0).ToList(),
+                AvailableCoins = this.vendingMachine.CoinsAvailable
             };
 
             return Ok(vendingMachineData);
         }
 
-        private List<Product> ProjectProductData()
-        {
-            return this.vendingMachine.Products;
-        }
 
         /// <summary>
         /// Adds a coin to the user's input
         /// </summary>
         /// <param name="denomination"></param>
         [HttpPost("InsertCoin")]
-        public async Task<IActionResult> AcceptCoin(double denomination)
+        public async Task<ActionResult<bool>> AcceptCoin(double denomination)
         {
             await this.vendingMachine.LoadMachine();
-            this.vendingMachine.AcceptCoin(denomination);
+            var result = this.vendingMachine.AcceptCoin(denomination);
             await this.vendingMachine.SaveMachine();
-
-            return Ok();
+            
+            if(result) return Ok(true);
+            return this.StatusCode((int)HttpStatusCode.BadRequest, false);
         }
         /// <summary>
         /// Returns coins inserted in the machine by the user

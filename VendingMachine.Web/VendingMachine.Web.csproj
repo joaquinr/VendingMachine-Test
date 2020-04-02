@@ -10,7 +10,7 @@
 		<CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
 
 		<!-- Set this to true if you enable server-side prerendering -->
-		<BuildServerSideRenderer>false</BuildServerSideRenderer>
+		<BuildServerSideRenderer>true</BuildServerSideRenderer>
 	</PropertyGroup>
 
 	<ItemGroup>

@@ -57,8 +57,14 @@ export class HomeComponent {
   onInsertCoin(coinDenomination: number) {
     this.serviceClient.insertCoin(coinDenomination).subscribe(result =>
     {
-      this.refreshData();
-      this.alerts.push("Inserted coin " + coinDenomination);
+      if (result) {
+        this.refreshData();
+        this.alerts.push("Inserted coin " + coinDenomination);
+      }
+    }, error => {
+        if (error.response === "false") {
+          this.alerts.push("Sorry, that is not a valid coin denomination. Please choose a euro coin");
+        };
     });    
   }
   onReturnCoins() {

@@ -10,7 +10,7 @@ namespace VendingMachine.Domain.Services
         double CurrentInsertedAmount { get; }
         List<Product> Products { get; }
 
-        void AcceptCoin(double denomination);
+        bool AcceptCoin(double denomination);
         void AddCoin(double coinDenomination);
         void AddProduct(Product product);
         Task LoadMachine();

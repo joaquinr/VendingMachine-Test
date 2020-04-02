@@ -7,8 +7,6 @@ import { RouterModule } from '@angular/router';
 import { AppComponent } from './app.component';
 import { NavMenuComponent } from './nav-menu/nav-menu.component';
 import { HomeComponent } from './home/home.component';
-import { CounterComponent } from './counter/counter.component';
-import { FetchDataComponent } from './fetch-data/fetch-data.component';
 import { VendingMachineClient, API_BASE_URL } from './services/VendingMachineService';
 import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
 
@@ -17,8 +15,6 @@ import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
     AppComponent,
     NavMenuComponent,
     HomeComponent,
-    CounterComponent,
-    FetchDataComponent
   ],
   imports: [
     NgbModule,
@@ -27,8 +23,6 @@ import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
     FormsModule,
     RouterModule.forRoot([
       { path: '', component: HomeComponent, pathMatch: 'full' },
-      { path: 'counter', component: CounterComponent },
-      { path: 'fetch-data', component: FetchDataComponent },
     ])
   ],
   providers: [{ provide: API_BASE_URL, useValue: 'http://localhost:5010' }, VendingMachineClient],
